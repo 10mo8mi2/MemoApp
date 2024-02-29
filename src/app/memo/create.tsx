@@ -1,22 +1,47 @@
 import {
-  View, TextInput, StyleSheet, KeyboardAvoidingView
+  View, TextInput, StyleSheet
 } from 'react-native'
 import { router } from 'expo-router'
+import { collection, addDoc, Timestamp } from 'firebase/firestore'
+import { useState } from 'react'
 
+import KeyboardAvoidingView from '../../components/KeyboardAvoidingView'
 import CircleButton from '../../components/CircleButton'
 import Icon from '../../components/Icon'
+import { db, auth } from '../../config'
 
-const handlePress = (): void => {
-  router.back()
+const handlePress = (bodyText: string): void => {
+  if (auth.currentUser === null) { return }
+  const ref = collection(db, `users/${auth.currentUser.uid}/memos`)
+  // バックティックで囲うことで、バックティック内の文字列で変数を使うことができる
+  // auth.currentUser.uidで現在ログインしているユーザーのidを使ったコレクションの参照ができる
+  addDoc(ref, {
+    bodyText,
+    updatedAt: Timestamp.fromDate(new Date()) // firestoreで時刻を扱うにはTimestampを使うことが公式ドキュメントに記載されている
+  })
+    .then((docRef) => {
+      console.log('success', docRef.id)
+      router.back()
+    })
+    .catch((error) => {
+      console.log(error)
+    })
 }
 
 const Create = (): JSX.Element => {
+  const [bodyText, setBodyText] = useState('')
   return (
-    <KeyboardAvoidingView behavior='height' style={styles.container}>
+    <KeyboardAvoidingView style={styles.container}>
       <View style={styles.inputContainer}>
-        <TextInput multiline style={styles.input} value='' />
+        <TextInput
+        multiline
+        style={styles.input}
+        value={bodyText}
+        onChangeText={(text) => { setBodyText(text) }}
+        autoFocus
+      />
       </View>
-      <CircleButton onPress={handlePress}>
+      <CircleButton onPress={() => { handlePress(bodyText) }}>
         <Icon name='check' size={40} color='#ffffff' />
       </CircleButton>
     </KeyboardAvoidingView>
